@@ -10,6 +10,12 @@ workspace "Pado"
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
+-- Include directories relative to root folder (solution dir)
+IncludeDir = {}
+IncludeDir["GLFW"] = "Pado/vendor/GLFW/include"
+
+include "Pado/vendor/GLFW"
+
 project "Pado"
 	location "Pado"
 	kind "SharedLib"
@@ -17,6 +23,9 @@ project "Pado"
 
 	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
+
+	pchheader "padopch.h"
+	pchsource "Pado/src/padopch.cpp"
 
 	files
 	{
@@ -28,6 +37,13 @@ project "Pado"
 	{
 		"%{prj.name}/src",
 		"%{prj.name}/vendor/spdlog/include"
+		"%{IncludeDir.GLFW}"
+	}
+
+	links
+	{
+		"GLFW",
+		"opengl32.lib"
 	}
 
 	filter "system:windows"
@@ -58,14 +74,14 @@ project "Pado"
 		defines "PADO_DIST"
 		optimize "On"
 
-    filter {"system:windows", "configurations:Release"}
-	    buildoptions "/utf-8"
+	filter {"system:windows", "configurations:Release"}
+		buildoptions "/utf-8"
 
-    filter {"system:windows", "configurations:Debug"}
-        buildoptions "/utf-8"
+	filter {"system:windows", "configurations:Debug"}
+		buildoptions "/utf-8"
 
-    filter {"system:windows", "configurations:Dist"}
-        buildoptions "/utf-8"
+	filter {"system:windows", "configurations:Dist"}
+		buildoptions "/utf-8"
 
 project "Sandbox"
 	location "Sandbox"
@@ -114,11 +130,11 @@ project "Sandbox"
 		defines "PADO_DIST"
 		optimize "On"
 
-    filter {"system:windows", "configurations:Release"}
-	    buildoptions "/utf-8"
+	filter {"system:windows", "configurations:Release"}
+		buildoptions "/utf-8"
 
-    filter {"system:windows", "configurations:Debug"}
-        buildoptions "/utf-8"
+	filter {"system:windows", "configurations:Debug"}
+		buildoptions "/utf-8"
 
-    filter {"system:windows", "configurations:Dist"}
-        buildoptions "/utf-8"
+	filter {"system:windows", "configurations:Dist"}
+		buildoptions "/utf-8"

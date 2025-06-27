@@ -1,9 +1,7 @@
 #pragma once
 
+#include "padopch.h"
 #include "Pado/Core.h"
-
-#include <string>
-#include <functional>
 
 namespace Pado {
 

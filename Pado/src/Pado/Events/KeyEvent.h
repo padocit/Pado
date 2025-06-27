@@ -2,8 +2,6 @@
 
 #include "Event.h"
 
-#include <sstream>
-
 namespace Pado {
 
 	class PADO_API KeyEvent : public Event
