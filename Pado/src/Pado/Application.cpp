@@ -8,6 +8,7 @@ namespace Pado {
 
 	Application::Application()
 	{
+		m_window = std::unique_ptr<Window>(Window::Create());
 	}
 
 	Application::~Application()
@@ -16,17 +17,10 @@ namespace Pado {
 
 	void Application::Run()
 	{
-		WindowResizeEvent e(1280, 720);
-		if (e.IsInCategory(EventCategoryApplication))
+		while (m_running)
 		{
-			PADO_TRACE(e);
+			m_window->OnUpdate();
 		}
-		if (e.IsInCategory(EventCategoryInput))
-		{
-			PADO_TRACE(e);
-		}
-
-		while (true);
 	}
 
 }
