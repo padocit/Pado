@@ -1,6 +1,3 @@
 [submodule "Pado/vendor/spdlog"]
 	path = Pado/vendor/spdlog
 	url = https://github.com/gabime/spdlog
-[submodule "Pado/vendor/GLFW"]
-	path = Pado/vendor/GLFW
-	url = https://github.com/padocit/glfw
