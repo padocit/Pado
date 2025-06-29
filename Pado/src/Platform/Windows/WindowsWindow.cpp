@@ -1,9 +1,29 @@
 #include "padopch.h"
 #include "WindowsWindow.h"
 
+#include "Pado/Events/ApplicationEvent.h"
+#include "Pado/Events/MouseEvent.h"
+#include "Pado/Events/KeyEvent.h"
+
 namespace Pado {
 
-	// UTF-8 std::string ¡æ UTF-16 std::wstring º¯È¯
+	static bool s_win32Initialized = false;
+
+	// helper
+	static void Win32Error(const char* context)
+	{
+		DWORD code = GetLastError();
+		char* msgBuf = nullptr;
+		FormatMessageA(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			nullptr, code,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPSTR)&msgBuf, 0, nullptr
+		);
+		PADO_CORE_ERROR("Win32 Error ({0}): {1} (code {2})", context, msgBuf, code);
+		LocalFree(msgBuf);
+	}
+	// UTF-8 string to UTF-16 wstring
 	static std::wstring StringToWide(const std::string& str) {
 		int size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
 		std::wstring wstr;
@@ -12,7 +32,6 @@ namespace Pado {
 		return wstr;
 	}
 
-	static bool s_win32Initialized = false;
 
 	Window* Window::Create(const WindowProps& props)
 	{
@@ -53,8 +72,12 @@ namespace Pado {
 							 L"PadoWindowClass", // lpszClassName, L-string
 							 NULL };
 
-			int success = RegisterClassEx(&wc);
-			PADO_CORE_ASSERT(success, "Could not initialize Win32 Class!");
+			if (!RegisterClassEx(&wc))
+			{
+				Win32Error("RegisterClassExW");
+				PADO_CORE_ASSERT(0, "Could not initialize Win32 Class!");
+				return;
+			}
 			s_win32Initialized = true;
 		}
 
@@ -71,7 +94,12 @@ namespace Pado {
 				wr.bottom - wr.top, // Window height
 				NULL, NULL, hInstance, NULL);
 
-		PADO_CORE_ASSERT(m_window, "Could not initialize Win32 Window!");
+		if (!m_window)
+		{
+			Win32Error("CreateWindowExW");
+			PADO_CORE_ASSERT(0, "Could not initialize Win32 Window!");
+			return;
+		}
 
 		SetWindowLongPtr(m_window, GWLP_USERDATA, (LONG_PTR)&m_data);
 		ShowWindow(m_window, SW_SHOWDEFAULT);
@@ -127,28 +155,88 @@ namespace Pado {
 
 	LRESULT CALLBACK WindowsWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
-		auto data = reinterpret_cast<WindowData*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+		WindowData* data = reinterpret_cast<WindowData*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
 		switch (msg)
 		{
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
+		case WM_SIZE:
+		{
+			data->width = LOWORD(lParam);
+			data->height = HIWORD(lParam);
 
-		//case WM_SIZE:
-		//	data->width = LOWORD(lParam);
-		//	data->height = HIWORD(lParam);
-		//	WindowResizeEvent event(data->width, data->height);
-		//	data->eventCallback(event);
-		//	break;
-
-		//case WM_CLOSE:
-		//	WindowCloseEvent event;
-		//	data->eventCallback(event);
-		//	break;
-
-		default:
-			return DefWindowProc(hWnd, msg, wParam, lParam);
+			WindowResizeEvent event(data->width, data->height);
+			if (data->eventCallback) // Init:ShowWindow,UpdateWindow -> WM_SIZE -> dispatching empty callback 
+				data->eventCallback(event);
+			break;
 		}
+		case WM_CLOSE:
+		{
+			WindowCloseEvent event;
+			data->eventCallback(event);
+			break;
+		}
+		case WM_KEYDOWN:
+		{
+			bool isRepeat = (lParam & (1 << 30)) != 0; // bit 30 = prev keyState is pressed
+
+			KeyPressedEvent event((int)wParam, isRepeat);
+			data->eventCallback(event);
+			break;
+		}
+		case WM_KEYUP:
+		{
+			KeyReleasedEvent event((int)wParam);
+			data->eventCallback(event);
+			break;
+		}
+		case WM_MOUSEMOVE:
+		{
+			MouseMovedEvent event((float)LOWORD(lParam), (float)HIWORD(lParam));
+			data->eventCallback(event);
+			break;
+		}
+		case WM_LBUTTONDOWN:
+		{
+			MouseButtonPressedEvent event(VK_LBUTTON);
+			data->eventCallback(event);
+			break;
+		}
+		case WM_LBUTTONUP:
+		{
+			MouseButtonReleasedEvent event(VK_LBUTTON);
+			data->eventCallback(event);
+			break;
+		}
+		case WM_RBUTTONDOWN:
+		{
+			MouseButtonPressedEvent event(VK_RBUTTON);
+			data->eventCallback(event);
+			break;
+		}
+		case WM_RBUTTONUP:
+		{
+			MouseButtonReleasedEvent event(VK_RBUTTON);
+			data->eventCallback(event);
+			break;
+		}
+		case WM_MOUSEWHEEL:
+		{
+			float yOffset = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+			MouseScrolledEvent event(0.0f, yOffset);
+			data->eventCallback(event);
+			break;
+		}
+		case WM_MOUSEHWHEEL: // Horizontal
+		{
+			float xOffset = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+			MouseScrolledEvent event(xOffset, 0.0f);
+			data->eventCallback(event);
+			break;
+		}
+		}
+		return DefWindowProc(hWnd, msg, wParam, lParam);
 	}
 } // namespace Pado

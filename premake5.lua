@@ -48,7 +48,7 @@ project "Pado"
 
 	filter "system:windows"
 		cppdialect "C++17"
-		staticruntime "On"
+		staticruntime "Off"
 		systemversion "latest"
 
 		defines
@@ -64,14 +64,17 @@ project "Pado"
 
 	filter "configurations:Debug"
 		defines "PADO_DEBUG"
+		runtime "Debug"
 		symbols "On"
 
 	filter "configurations:Release"
 		defines "PADO_RELEASE"
+		runtime "Release"
 		optimize "On"
 
 	filter "configurations:Dist"
 		defines "PADO_DIST"
+		runtime "Release"
 		optimize "On"
 
 	filter {"system:windows", "configurations:Release"}
@@ -110,7 +113,7 @@ project "Sandbox"
 
 	filter "system:windows"
 		cppdialect "C++17"
-		staticruntime "On"
+		--staticruntime "On"
 		systemversion "latest"
 
 		defines
